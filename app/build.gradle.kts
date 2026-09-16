@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    // No org.jetbrains.kotlin.android plugin: AGP 9+ has built-in Kotlin
+    // support and applying it is no longer allowed. The Compose compiler
+    // plugin is still needed separately.
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -26,10 +28,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    // No separate kotlinOptions/jvmTarget block: with built-in Kotlin, the
+    // Kotlin JVM target defaults to compileOptions.targetCompatibility above.
 
     buildFeatures {
         compose = true

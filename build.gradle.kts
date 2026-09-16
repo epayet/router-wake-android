@@ -1,5 +1,5 @@
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.kotlin.android) apply false
+    // No org.jetbrains.kotlin.android: AGP 9+ has built-in Kotlin support.
     alias(libs.plugins.kotlin.compose) apply false
 }

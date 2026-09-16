@@ -84,6 +84,15 @@ fail to connect. Use it only for UI iteration.
 
 ## 5. Troubleshooting
 
+- **Gradle sync fails mentioning `org.jetbrains.kotlin.android` / "built-in
+  Kotlin"**: this project targets AGP 9+, which bundles Kotlin support
+  directly and no longer wants the separate `kotlin-android` plugin
+  applied. If Android Studio's AGP upgrade assistant offers to "migrate to
+  built-in Kotlin," accept it; otherwise this repo's `build.gradle.kts`
+  files already reflect that setup — re-sync and it should resolve. The
+  Compose compiler plugin (`org.jetbrains.kotlin.plugin.compose`) is a
+  separate thing and stays applied.
+
 - **HTTP 401 / digest auth failures**: double check the dedicated
   FritzBox user's username/password in `Config.kt`, and that user's
   permissions (step 2). Use `adb logcat` (filter on the app's package,

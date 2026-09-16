@@ -23,5 +23,6 @@ squareup-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+# No kotlin-android entry: AGP 9+ has built-in Kotlin support, and applying
+# org.jetbrains.kotlin.android alongside it is an error.
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
