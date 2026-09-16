@@ -1,3 +1,5 @@
+<img src="docs/logo.svg" width="96" height="96" alt="RouterWake logo" />
+
 # RouterWake
 
 Sends Wake-on-LAN to a home PC through a FritzBox and shows whether it's
@@ -5,6 +7,8 @@ on. Talks to the FritzBox over **TR-064** (SOAP/UPnP), not the web portal
 login — no port forwarding, no relay device. You get the phone onto the
 FritzBox's LAN yourself (VPN or otherwise) before using it; the app
 doesn't manage that connectivity itself.
+
+<img src="docs/screenshot-main.png" width="240" alt="RouterWake main screen: the router mascot status indicator, Turn On, and Refresh status" />
 
 ## FritzBox-side setup
 
