@@ -2,8 +2,9 @@
 
 Sends Wake-on-LAN to a home PC through a FritzBox and shows whether it's
 on. Talks to the FritzBox over **TR-064** (SOAP/UPnP), not the web portal
-login — no port forwarding, no relay device. You connect the phone's
-WireGuard VPN manually before using it; the app doesn't manage the VPN.
+login — no port forwarding, no relay device. You get the phone onto the
+FritzBox's LAN yourself (VPN or otherwise) before using it; the app
+doesn't manage that connectivity itself.
 
 ## FritzBox-side setup
 
@@ -22,50 +23,16 @@ The app's first-run onboarding covers this, but for reference:
 No config file — host/port/credentials/MAC/IP are entered in-app on
 first launch and stored Keystore-encrypted on-device.
 
-1. Run on a real device (the emulator can't join the WireGuard VPN, so
+1. Run on a real device (the emulator can't reach the FritzBox's LAN, so
    TR-064 calls will just fail to connect — UI iteration only).
-2. Connect the VPN before opening the app.
+2. Get the phone onto the FritzBox's network before opening the app.
 3. First launch: onboarding wizard → details form (`fritz.box` is the
    default host). Reachable again via "Edit setup".
 4. Grant local network access (Android 17+ requires it separately from
-   internet access; see Troubleshooting).
+   internet access).
 5. "Turn On" wakes the PC. Status auto-polls every 15s — mascot plate is
    yellow (on) / blue (off/unknown) / red (check failed). "Refresh
    status" forces an immediate check.
-
-## Troubleshooting
-
-- **Connect times out but the address works in the phone's browser**:
-  missing `ACCESS_LOCAL_NETWORK` — grant via the in-app button, or the
-  system Settings page if denied once already.
-- **`Cleartext communication ... not permitted`**: manifest needs
-  `android:usesCleartextTraffic="true"` (TR-064 over the VPN is
-  intentionally plain HTTP).
-- **HTTP 401 / digest auth failure**: recheck credentials via "Edit
-  setup" and the dedicated user's permissions. `adb logcat` filtered on
-  `com.jakspinning.wakemypc` shows the raw response.
-- **Connection refused/timeout**: VPN not actually connected, or
-  `fritz.box` doesn't resolve from the phone.
-- **SOAP fault in the response**: TR-064 disabled, or action names don't
-  match your firmware version.
-- **Gradle sync complains about `org.jetbrains.kotlin.android`**: AGP 9's
-  built-in Kotlin support replaces it — accept the migration prompt.
-- Sanity-check the FritzBox side independent of the app:
-  ```sh
-  curl --digest -u <user>:<pass> \
-    http://fritz.box:49000/upnp/control/hosts \
-    -H 'Content-Type: text/xml; charset="utf-8"' \
-    -H 'SOAPAction: urn:dslforum-org:service:Hosts:1#X_AVM-DE_WakeOnLANByMACAddress' \
-    -d '<?xml version="1.0" encoding="utf-8"?>
-        <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-          <s:Body>
-            <u:X_AVM-DE_WakeOnLANByMACAddress xmlns:u="urn:dslforum-org:service:Hosts:1">
-              <NewMACAddress>AA:BB:CC:DD:EE:FF</NewMACAddress>
-            </u:X_AVM-DE_WakeOnLANByMACAddress>
-          </s:Body>
-        </s:Envelope>'
-  ```
-  Fails here → fix here first, not in the app.
 
 ## Project layout
 
