@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.jakspinning.wakemypc.network.FritzTr064Client
+import com.jakspinning.wakemypc.network.pingHost
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -46,7 +47,7 @@ private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NE
 // How often to silently re-check status in the background. Without this,
 // e.g. turning off Wi-Fi just leaves the last-known status on screen
 // (looks "on" forever) instead of the next check surfacing the failure.
-private const val AUTO_REFRESH_INTERVAL_MS = 15_000L
+private const val AUTO_REFRESH_INTERVAL_MS = 5_000L
 
 // The in-app status mascot's whole plate swaps color with PC state (unlike
 // the launcher icon, which stays a fixed blue).
@@ -127,12 +128,14 @@ private fun MainScreen(config: FritzBoxConfig, onEditSetup: () -> Unit) {
 
     suspend fun refreshStatus() {
         isRefreshing = true
-        val result = client.getHostStatus(config.pcLanIp)
+        // Pinged directly rather than asked of the FritzBox: TR-064's host
+        // table reports link presence, and a PC with "Wake on Magic Packet"
+        // enabled (required for WOL to work) keeps its Ethernet link up
+        // even when fully shut down, so the FritzBox would report it as
+        // connected forever.
+        val reachable = pingHost(config.pcLanIp)
         isRefreshing = false
-        status = result.fold(
-            onSuccess = { active -> if (active) "on" else "off" },
-            onFailure = { "error: ${it.message}" },
-        )
+        status = if (reachable) "on" else "off"
     }
 
     // Checks immediately once permission is available (instead of making the

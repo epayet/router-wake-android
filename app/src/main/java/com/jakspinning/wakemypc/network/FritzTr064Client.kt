@@ -36,19 +36,6 @@ class FritzTr064Client(
         }.onFailure { Log.e(TAG, "wakeOnLan failed", it) }
     }
 
-    suspend fun getHostStatus(ipAddress: String): Result<Boolean> = withContext(Dispatchers.IO) {
-        runCatching {
-            val responseBody = post(
-                action = "X_AVM-DE_GetSpecificHostEntryByIP",
-                body = buildGetHostStatusEnvelope(ipAddress),
-            )
-            val active = extractSoapField(responseBody, "NewActive")
-                ?: error("Response did not contain NewActive")
-            // TR-064 encodes SOAP booleans as "0"/"1", not "true"/"false".
-            active == "1" || active.equals("true", ignoreCase = true)
-        }.onFailure { Log.e(TAG, "getHostStatus failed", it) }
-    }
-
     private fun post(action: String, body: String): String {
         Log.d(TAG, "POST $endpoint (action=$action)")
         val request = Request.Builder()

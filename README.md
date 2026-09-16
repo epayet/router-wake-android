@@ -39,7 +39,7 @@ first launch and stored Keystore-encrypted on-device.
    default host). Reachable again via "Edit setup".
 4. Grant local network access (Android 17+ requires it separately from
    internet access).
-5. "Turn On" wakes the PC. Status auto-polls every 15s — mascot plate is
+5. "Turn On" wakes the PC. Status auto-polls every 5s — mascot plate is
    yellow (on) / blue (off/unknown) / red (check failed). "Refresh
    status" forces an immediate check.
 
@@ -54,9 +54,24 @@ app/src/main/java/com/jakspinning/wakemypc/
   RouterMascotIndicator.kt Live status indicator (reuses the launcher icon's artwork)
   network/
     DigestAuthenticator.kt Hand-rolled OkHttp Digest Auth (MD5, RFC 2617)
-    SoapEnvelope.kt         Builds/parses the small TR-064 SOAP XML
-    FritzTr064Client.kt     wakeOnLan() and getHostStatus()
+    SoapEnvelope.kt         Builds the small TR-064 SOAP XML
+    FritzTr064Client.kt     wakeOnLan(), over TR-064
+    HostReachability.kt     pingHost() — the "is it on" check (see below)
 ```
+
+Status is checked by pinging the PC's LAN IP directly rather than asking
+the FritzBox. TR-064's host table only reports whether a MAC address has
+link, and a PC with "Wake on Magic Packet" enabled (required for WOL to
+work at all) keeps its Ethernet PHY powered while fully shut down — so
+the FritzBox reports it as permanently connected, even off. A direct
+ping reflects whether the OS network stack is actually up.
+
+This assumes the PC responds to ICMP pings on the LAN, which Windows
+usually does for a network set to "Private" with network
+discovery/file-sharing on (the common default for a home PC). If status
+always reads "off" even when the PC is on, check Windows Firewall →
+Advanced settings → Inbound Rules → "File and Printer Sharing (Echo
+Request - ICMPv4-In)" is enabled for the Private profile.
 
 ## Privacy
 
