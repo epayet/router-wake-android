@@ -1,0 +1,19 @@
+# Local config with real FritzBox credentials — never commit this.
+app/src/main/java/com/jakspinning/wakemypc/Config.kt
+
+# Gradle / Android build output
+.gradle/
+build/
+app/build/
+local.properties
+captures/
+.cxx/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.DS_Store
+
+# Signing (if ever added)
+*.jks
+*.keystore
