@@ -84,6 +84,13 @@ fail to connect. Use it only for UI iteration.
 
 ## 5. Troubleshooting
 
+- **`Cleartext communication to fritz.box not permitted by network
+  security policy`**: Android 9+ blocks plain HTTP by default. TR-064
+  over the VPN tunnel (port 49000) is intentionally plain HTTP for this
+  app (see Phase 2+ backlog re: TLS), so the manifest carries
+  `android:usesCleartextTraffic="true"` on the `<application>` element to
+  allow it. If you see this error, check that attribute is still there —
+  it's easy to lose if you regenerate/merge the manifest.
 - **Gradle sync fails mentioning `org.jetbrains.kotlin.android` / "built-in
   Kotlin"**: this project targets AGP 9+, which bundles Kotlin support
   directly and no longer wants the separate `kotlin-android` plugin
