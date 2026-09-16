@@ -24,6 +24,12 @@ This README assumes you've never used Android Studio before.
 
 ## 2. FritzBox-side setup (do this once, before touching the app)
 
+The app itself walks you through all of this the first time you launch
+it (enable TR-064, create a dedicated user, find your PC's MAC/IP, then
+enter everything on a details screen) — you don't need to read the
+FritzBox web UI's menus from this README. It's summarized here too in
+case you want to do it ahead of time:
+
 - [ ] Enable TR-064: on the FritzBox web UI, go to *Home Network →
       Network → Network Settings* and turn on "Allow access for
       applications". The FritzBox will need to reboot.
@@ -45,17 +51,12 @@ This README assumes you've never used Android Studio before.
    (`android-wlan`). Let it sync Gradle (first sync downloads the
    Android SDK components / Gradle distribution it needs — this can
    take a few minutes).
-2. Copy `Config.kt.example` to
-   `app/src/main/java/com/jakspinning/wakemypc/Config.kt` and fill in:
-   - `FRITZBOX_HOST` — usually `fritz.box`, reachable once the VPN is up.
-   - `TR064_PORT` — `49000` (plain HTTP; fine over the VPN tunnel).
-   - `FRITZBOX_USERNAME` / `FRITZBOX_PASSWORD` — the dedicated user from
-     step 2.
-   - `PC_MAC_ADDRESS` / `PC_LAN_IP` — from step 2.
 
-   `Config.kt` is gitignored — your real credentials never get committed.
-   Re-sync Gradle if Android Studio doesn't pick up the new file
-   automatically (File → Sync Project with Gradle Files).
+   There's nothing to configure before building — no file to copy or
+   edit. The FritzBox host/port, username/password, and your PC's
+   MAC/IP are all entered inside the app on first launch (see below)
+   and stored on-device, with the username/password encrypted using an
+   Android Keystore-backed key, not in source code.
 
 ## 4. Running the app
 
@@ -68,15 +69,24 @@ This README assumes you've never used Android Studio before.
    with `adb devices`.)
 3. Click the green Run ▶ button in Android Studio (or press
    Shift+F10). This builds and installs the app to your phone.
-4. **Before tapping "Turn On" in the app**, manually connect your
-   phone's WireGuard VPN (outside the app, as usual) so it can actually
-   reach the FritzBox.
-5. The first time, tap **"Grant local network access"** and allow it —
-   Android 17+ requires this permission just to open a connection to any
-   device on your LAN (see Troubleshooting below for why). The "Turn On"
-   / "Refresh status" buttons stay disabled until it's granted.
-6. Tap "Turn On" and confirm the PC wakes up. Tap "Refresh status" to
-   check on/off state.
+4. **Before opening the app**, manually connect your phone's WireGuard
+   VPN (outside the app, as usual) so it can actually reach the
+   FritzBox.
+5. **First launch only**: the app shows a short setup wizard that walks
+   through enabling TR-064, creating a dedicated FritzBox user, and
+   finding your PC's MAC address and LAN IP, then asks you to enter
+   them. The FritzBox address field defaults to `fritz.box`, so you
+   usually don't need to type an IP at all. You can revisit this screen
+   later from the "Edit setup" button on the main screen.
+6. Tap **"Grant local network access"** and allow it — Android 17+
+   requires this permission just to open a connection to any device on
+   your LAN (see Troubleshooting below for why). The "Turn On" /
+   "Refresh status" buttons stay disabled until it's granted.
+7. Tap "Turn On" and confirm the PC wakes up. Status re-checks itself
+   automatically every 15 seconds — the router mascot's plate turns
+   yellow when the PC is on, blue when it's off/unknown, red if a check
+   fails (e.g. your phone's own Wi-Fi/VPN dropped). "Refresh status"
+   forces an immediate check instead of waiting for the next tick.
 
 ### On the emulator
 
@@ -117,9 +127,9 @@ fail to connect. Use it only for UI iteration.
   separate thing and stays applied.
 
 - **HTTP 401 / digest auth failures**: double check the dedicated
-  FritzBox user's username/password in `Config.kt`, and that user's
-  permissions (step 2). Use `adb logcat` (filter on the app's package,
-  `com.jakspinning.wakemypc`) to see the raw response.
+  FritzBox user's username/password via the app's "Edit setup" button,
+  and that user's permissions (step 2). Use `adb logcat` (filter on the
+  app's package, `com.jakspinning.wakemypc`) to see the raw response.
 - **Connection refused / timeout**: confirm the phone's WireGuard VPN is
   actually connected, and that `FRITZBOX_HOST` resolves/responds from
   the phone (e.g. by opening `http://fritz.box` in the phone's browser
@@ -151,13 +161,27 @@ fail to connect. Use it only for UI iteration.
 ```
 app/src/main/java/com/jakspinning/wakemypc/
   MainActivity.kt          Compose UI: "Turn On" button, status text, refresh button
-  Config.kt                Your real config (gitignored, not in this repo)
+  OnboardingScreen.kt      First-run tutorial + the FritzBox/PC details form
+  SettingsRepository.kt    Reads/writes FritzBoxConfig; encrypts username/password with an Android Keystore key
   network/
     DigestAuthenticator.kt Hand-rolled OkHttp Digest Auth (MD5, RFC 2617)
     SoapEnvelope.kt         Builds/parses the small TR-064 SOAP XML
     FritzTr064Client.kt     wakeOnLan() and getHostStatus()
-Config.kt.example           Template — copy to Config.kt and fill in
 ```
+
+## Privacy
+
+- Everything you enter is encrypted at rest with a key held in the phone's
+  hardware-backed Android Keystore (see `SettingsRepository.kt`) — the key
+  material never leaves the device, and isn't something that can be
+  recovered just by copying files off the phone.
+- The app holds the `INTERNET` permission because OkHttp needs it to make an
+  HTTP request at all, even one that never leaves your own LAN/VPN. There's
+  no analytics, crash reporting, or ad SDK in this app, and the only host it
+  ever talks to is the FritzBox address you enter — nothing about your setup
+  is sent anywhere else.
+- Everything is local-only: no account, no cloud sync, no server this
+  project runs. Uninstalling the app deletes everything it stored.
 
 ## Not in scope yet
 
@@ -166,10 +190,6 @@ These are deliberately left out of this version:
 - In-app WireGuard VPN connect/disconnect (you connect manually).
 - SSH-based remote shutdown.
 - Biometric prompt gating the buttons.
-- A settings screen (config is currently a hardcoded, gitignored file —
-  fine for single-user personal use; a settings UI backed by
-  `EncryptedSharedPreferences` is a natural next step if that stops
-  being convenient).
 - TLS to the FritzBox (currently plain HTTP over the VPN tunnel; port
   49443 with the FritzBox's self-signed cert is a possible later
   upgrade).

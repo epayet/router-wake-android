@@ -1,7 +1,7 @@
 package com.jakspinning.wakemypc
 
 import android.content.pm.PackageManager
-import android.graphics.Color
+import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,10 +29,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.jakspinning.wakemypc.network.FritzTr064Client
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // Android 17+ (API 37+) requires this permission to reach devices on the
@@ -40,6 +43,18 @@ import kotlinx.coroutines.launch
 // not exist on the SDK platform actually installed locally.
 private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
 
+// How often to silently re-check status in the background. Without this,
+// e.g. turning off Wi-Fi just leaves the last-known status on screen
+// (looks "on" forever) instead of the next check surfacing the failure.
+private const val AUTO_REFRESH_INTERVAL_MS = 15_000L
+
+// The in-app status mascot's whole plate swaps color with PC state (unlike
+// the launcher icon, which stays a fixed blue).
+private val StatusOnColor = Color(0xFFFFC72C)
+private val StatusIdleColor = Color(0xFF0B5FA5)
+private val StatusErrorColor = Color(0xFFD64550)
+private val DarkLineColor = Color(0xFF12181F)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,11 +62,11 @@ class MainActivity : ComponentActivity() {
         // status/nav bar icons regardless of system dark mode — otherwise
         // "auto" can pick light icons that vanish against our white background.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
         )
         setContent {
-            MaterialTheme {
+            RouterWakeTheme {
                 WakeMyPcScreen()
             }
         }
@@ -61,16 +76,38 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WakeMyPcScreen() {
     val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(context) }
+
+    var config by remember { mutableStateOf(settingsRepository.load()) }
+    var editingSetup by remember { mutableStateOf(false) }
+
+    val currentConfig = config
+    if (currentConfig == null || editingSetup) {
+        OnboardingScreen(
+            initial = if (editingSetup) currentConfig else null,
+            onSave = { newConfig ->
+                settingsRepository.save(newConfig)
+                config = newConfig
+                editingSetup = false
+            },
+            onCancel = if (editingSetup) { { editingSetup = false } } else null,
+        )
+    } else {
+        MainScreen(config = currentConfig, onEditSetup = { editingSetup = true })
+    }
+}
+
+@Composable
+private fun MainScreen(config: FritzBoxConfig, onEditSetup: () -> Unit) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // v0: credentials/host/MAC/IP come from the gitignored Config.kt
-    // (copy Config.kt.example to Config.kt and fill in real values — see README).
-    val client = remember {
+    val client = remember(config) {
         FritzTr064Client(
-            host = Config.FRITZBOX_HOST,
-            port = Config.TR064_PORT,
-            username = Config.FRITZBOX_USERNAME,
-            password = Config.FRITZBOX_PASSWORD,
+            host = config.host,
+            port = config.port,
+            username = config.username,
+            password = config.password,
         )
     }
 
@@ -90,7 +127,7 @@ fun WakeMyPcScreen() {
 
     suspend fun refreshStatus() {
         isRefreshing = true
-        val result = client.getHostStatus(Config.PC_LAN_IP)
+        val result = client.getHostStatus(config.pcLanIp)
         isRefreshing = false
         status = result.fold(
             onSuccess = { active -> if (active) "on" else "off" },
@@ -98,11 +135,22 @@ fun WakeMyPcScreen() {
         )
     }
 
-    // Load status automatically once permission is available, instead of
-    // making the user tap "Refresh status" first.
-    LaunchedEffect(hasLocalNetworkPermission) {
-        if (hasLocalNetworkPermission) refreshStatus()
+    // Checks immediately once permission is available (instead of making the
+    // user tap "Refresh status" first), then keeps polling in the background
+    // so the screen doesn't show a stale status indefinitely.
+    LaunchedEffect(hasLocalNetworkPermission, config) {
+        while (true) {
+            if (hasLocalNetworkPermission) refreshStatus()
+            delay(AUTO_REFRESH_INTERVAL_MS)
+        }
     }
+
+    val mascotBackground = when {
+        status == "on" -> StatusOnColor
+        status.startsWith("error") -> StatusErrorColor
+        else -> StatusIdleColor
+    }
+    val mascotLineColor = if (status == "on") DarkLineColor else Color.White
 
     Scaffold { padding ->
         Column(
@@ -113,6 +161,7 @@ fun WakeMyPcScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         ) {
+            RouterMascotIndicator(backgroundColor = mascotBackground, lineColor = mascotLineColor)
             Text(text = "Status: $status", style = MaterialTheme.typography.headlineSmall)
 
             if (!hasLocalNetworkPermission) {
@@ -130,7 +179,7 @@ fun WakeMyPcScreen() {
                 onClick = {
                     isWaking = true
                     scope.launch {
-                        val result = client.wakeOnLan(Config.PC_MAC_ADDRESS)
+                        val result = client.wakeOnLan(config.pcMacAddress)
                         isWaking = false
                         val message = result.fold(
                             onSuccess = { "Wake-on-LAN sent" },
@@ -145,9 +194,18 @@ fun WakeMyPcScreen() {
 
             OutlinedButton(
                 enabled = !isRefreshing && hasLocalNetworkPermission,
-                onClick = { scope.launch { refreshStatus() } },
+                onClick = {
+                    scope.launch {
+                        refreshStatus()
+                        Toast.makeText(context, "Status refreshed", Toast.LENGTH_SHORT).show()
+                    }
+                },
             ) {
                 Text(if (isRefreshing) "Checking…" else "Refresh status")
+            }
+
+            TextButton(onClick = onEditSetup) {
+                Text("Edit setup")
             }
         }
     }
