@@ -1,5 +1,6 @@
 package com.jakspinning.wakemypc.network
 
+import android.util.Log
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -7,6 +8,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+
+private const val TAG = "WakeMyPc"
 
 /**
  * Talks to a FritzBox's TR-064 control interface (SOAP/UPnP), NOT the web
@@ -30,7 +33,7 @@ class FritzTr064Client(
         runCatching {
             post(action = "X_AVM-DE_WakeOnLANByMACAddress", body = buildWakeOnLanEnvelope(macAddress))
             Unit
-        }
+        }.onFailure { Log.e(TAG, "wakeOnLan failed", it) }
     }
 
     suspend fun getHostStatus(ipAddress: String): Result<Boolean> = withContext(Dispatchers.IO) {
@@ -43,10 +46,11 @@ class FritzTr064Client(
                 ?: error("Response did not contain NewActive")
             // TR-064 encodes SOAP booleans as "0"/"1", not "true"/"false".
             active == "1" || active.equals("true", ignoreCase = true)
-        }
+        }.onFailure { Log.e(TAG, "getHostStatus failed", it) }
     }
 
     private fun post(action: String, body: String): String {
+        Log.d(TAG, "POST $endpoint (action=$action)")
         val request = Request.Builder()
             .url(endpoint)
             .addHeader("SOAPAction", soapActionHeader(action))
