@@ -71,7 +71,11 @@ This README assumes you've never used Android Studio before.
 4. **Before tapping "Turn On" in the app**, manually connect your
    phone's WireGuard VPN (outside the app, as usual) so it can actually
    reach the FritzBox.
-5. Tap "Turn On" and confirm the PC wakes up. Tap "Refresh status" to
+5. The first time, tap **"Grant local network access"** and allow it —
+   Android 17+ requires this permission just to open a connection to any
+   device on your LAN (see Troubleshooting below for why). The "Turn On"
+   / "Refresh status" buttons stay disabled until it's granted.
+6. Tap "Turn On" and confirm the PC wakes up. Tap "Refresh status" to
    check on/off state.
 
 ### On the emulator
@@ -84,6 +88,18 @@ fail to connect. Use it only for UI iteration.
 
 ## 5. Troubleshooting
 
+- **`SocketTimeoutException: failed to connect ... after 10000ms`, even
+  though the same address works fine in the phone's browser**: Android
+  17+ (API 37+, which this app targets) requires apps to hold the new
+  `ACCESS_LOCAL_NETWORK` runtime permission just to open a connection to
+  *any* device on the LAN — separate from the regular internet
+  permission. Without it, a TCP connect to a private IP just times out
+  silently rather than raising a clear permission error, which makes it
+  look exactly like a network problem. The app requests this permission
+  via a "Grant local network access" button that appears until it's
+  granted (see step 5 above). If you denied it once, Android may require
+  granting it from the app's system Settings page instead of showing the
+  prompt again.
 - **`Cleartext communication to fritz.box not permitted by network
   security policy`**: Android 9+ blocks plain HTTP by default. TR-064
   over the VPN tunnel (port 49000) is intentionally plain HTTP for this

@@ -1,10 +1,13 @@
 package com.jakspinning.wakemypc
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,8 +27,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.jakspinning.wakemypc.network.FritzTr064Client
 import kotlinx.coroutines.launch
+
+// Android 17+ (API 37+) requires this permission to reach devices on the
+// LAN at all. Referenced as a literal string rather than
+// Manifest.permission.ACCESS_LOCAL_NETWORK since that typed constant may
+// not exist on the SDK platform actually installed locally.
+private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +69,16 @@ fun WakeMyPcScreen() {
     var isRefreshing by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("unknown") }
 
+    var hasLocalNetworkPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, LOCAL_NETWORK_PERMISSION) ==
+                PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val requestLocalNetworkPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> hasLocalNetworkPermission = granted }
+
     Scaffold { padding ->
         Column(
             modifier = Modifier
@@ -70,8 +90,18 @@ fun WakeMyPcScreen() {
         ) {
             Text(text = "Status: $status", style = MaterialTheme.typography.headlineSmall)
 
+            if (!hasLocalNetworkPermission) {
+                Text(
+                    text = "This app needs local network access to reach your FritzBox.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Button(onClick = { requestLocalNetworkPermission.launch(LOCAL_NETWORK_PERMISSION) }) {
+                    Text("Grant local network access")
+                }
+            }
+
             Button(
-                enabled = !isWaking,
+                enabled = !isWaking && hasLocalNetworkPermission,
                 onClick = {
                     isWaking = true
                     scope.launch {
@@ -89,7 +119,7 @@ fun WakeMyPcScreen() {
             }
 
             OutlinedButton(
-                enabled = !isRefreshing,
+                enabled = !isRefreshing && hasLocalNetworkPermission,
                 onClick = {
                     isRefreshing = true
                     scope.launch {

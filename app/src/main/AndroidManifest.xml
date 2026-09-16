@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 17+ requires this to reach devices on the LAN (e.g. the
+         FritzBox) at all — without it, TCP connects to private IPs just
+         time out, indistinguishable from a real network failure. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:allowBackup="true"
