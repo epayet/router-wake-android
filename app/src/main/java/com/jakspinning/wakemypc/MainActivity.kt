@@ -1,9 +1,11 @@
 package com.jakspinning.wakemypc
 
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +20,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +43,13 @@ private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NE
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // App content is always light (see Theme.WakeMyPc), so force dark
+        // status/nav bar icons regardless of system dark mode — otherwise
+        // "auto" can pick light icons that vanish against our white background.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+        )
         setContent {
             MaterialTheme {
                 WakeMyPcScreen()
@@ -78,6 +87,22 @@ fun WakeMyPcScreen() {
     val requestLocalNetworkPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> hasLocalNetworkPermission = granted }
+
+    suspend fun refreshStatus() {
+        isRefreshing = true
+        val result = client.getHostStatus(Config.PC_LAN_IP)
+        isRefreshing = false
+        status = result.fold(
+            onSuccess = { active -> if (active) "on" else "off" },
+            onFailure = { "error: ${it.message}" },
+        )
+    }
+
+    // Load status automatically once permission is available, instead of
+    // making the user tap "Refresh status" first.
+    LaunchedEffect(hasLocalNetworkPermission) {
+        if (hasLocalNetworkPermission) refreshStatus()
+    }
 
     Scaffold { padding ->
         Column(
@@ -120,17 +145,7 @@ fun WakeMyPcScreen() {
 
             OutlinedButton(
                 enabled = !isRefreshing && hasLocalNetworkPermission,
-                onClick = {
-                    isRefreshing = true
-                    scope.launch {
-                        val result = client.getHostStatus(Config.PC_LAN_IP)
-                        isRefreshing = false
-                        status = result.fold(
-                            onSuccess = { active -> if (active) "on" else "off" },
-                            onFailure = { "error: ${it.message}" },
-                        )
-                    }
-                },
+                onClick = { scope.launch { refreshStatus() } },
             ) {
                 Text(if (isRefreshing) "Checking…" else "Refresh status")
             }

@@ -3,16 +3,84 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- A startled, ringing alarm clock — wake up! -->
+
+    <!-- clock body -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,24 L54,54"
+        android:fillColor="#00000000"
+        android:pathData="M32,58 a22,22 0 1,0 44,0 a22,22 0 1,0 -44,0"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="8"
+        android:strokeWidth="6"
+        android:strokeLineCap="round" />
+
+    <!-- bells -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M29,32 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
         android:strokeLineCap="round" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M38,38 A26,26 0 1 0 70,38"
+        android:pathData="M65,32 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="8"
+        android:strokeWidth="5"
         android:strokeLineCap="round" />
+
+    <!-- bell stems -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M40,37 L47,44"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M68,37 L61,44"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+
+    <!-- feet -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M43,78 L38,85"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M65,78 L70,85"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+
+    <!-- ringing sound-wave marks -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M26,28 a10,10 0 0,0 -5,9"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M82,28 a10,10 0 0,1 5,9"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+
+    <!-- wide, startled eyes -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43,56 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M59,56 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+    <!-- surprised "oh!" mouth -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M51,68 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3" />
 </vector>
