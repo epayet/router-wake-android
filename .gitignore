@@ -1,4 +1,5 @@
-# Local config with real FritzBox credentials — never commit this.
+# Leftover from v0, before setup moved in-app (see README) — a stray local
+# copy would contain real FritzBox credentials, so keep ignoring it.
 app/src/main/java/com/jakspinning/wakemypc/Config.kt
 
 # Gradle / Android build output
